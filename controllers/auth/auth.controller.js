@@ -1,5 +1,4 @@
 import User from "../../models/userModel.js";
-import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 
 import { generateAccessToken, generateRefreshToken } from "../../utils/generateToken.js";
@@ -14,18 +13,16 @@ const registerUser = async (req, res) => {
             return res.status(409).send({ status: 409, message: "Email already exits" })
         }
 
-        const hashPassword = bcrypt.hashSync(password, 10)
-
         await User.create({
             email,
             userName,
-            password: hashPassword
+            password
         })
 
-        return res.status(200).send({ status: 200, message: "Sign up successfully" });
+        return res.status(201).send({ status: 201, message: "Sign up successfully" });
     } catch (error) {
-        console.log(error);
-        res.status(500).send({ status: 500, message: "Internal server error" })
+        console.log("Register Error", error);
+        res.status(500).send({ status: 500, message: error.message })
     }
 }
 
@@ -34,22 +31,21 @@ const loginUser = async (req, res) => {
 
         const { email, password } = req.body;
 
-
         const user = await User.findOne({ email }).select("+password");
 
         if (!user) {
-            return res.status(404).send({ status: 404, message: "Email not found" })
+            return res.status(404).send({ status: 404, message: "User not found" });
         }
 
-        const isValidPassword = bcrypt.compareSync(password, user.password);
+        const isMatch = await user.comparePassword(password);
 
-        if (!isValidPassword) {
-            return res.status(400).send({ status: 400, message: "Incorrect password" })
+        if (!isMatch) {
+            return res.status(401).send({ status: 401, message: "Invalid credentials" });
         }
 
-        const accessToken = generateAccessToken("5m", email, user._id, user.userName);
+        const accessToken = generateAccessToken("15m", email, user._id, user.userName);
 
-        const refreshToken = generateRefreshToken("15m", user._id);
+        const refreshToken = generateRefreshToken("1d", user._id);
 
         user.refreshToken = refreshToken;
 
@@ -57,7 +53,7 @@ const loginUser = async (req, res) => {
 
         return res.status(200).send({ status: 200, message: "Login successfully", accessToken, refreshToken })
     } catch (error) {
-        console.log(error);
+        console.log("Login Error", error);
         res.status(500).send({ status: 500, message: "Internal server error" })
     }
 }
@@ -71,19 +67,29 @@ const refreshAccessToken = async (req, res) => {
 
         const { refreshToken } = req.body;
 
+        if (!refreshToken) {
+            return res.status(400).send({ status: 400, message: "Refresh token not provided" })
+        }
+
         const { id } = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-        const user = await User.findOne({ _id: id });
+        const user = await User.findById(id);
 
         if (!user) {
             return res.status(404).send({ status: 404, message: "User not found" })
         }
 
-        const newAccessToken = generateAccessToken("5m", user.email, user._id, user.userName);
+        const tokenExits = user.refreshToken.includes(refreshToken);
+
+        if (!tokenExits) {
+            return res.status(401).send({ status: 401, message: "Refresh token invalid or revoked" });
+        }
+
+        const newAccessToken = generateAccessToken("15m", user.email, user._id, user.userName);
 
         return res.status(200).send({ status: 200, accessToken: newAccessToken });
     } catch (error) {
-        console.log(error);
+        console.log("Refresh token error", error);
         if (error.message.includes("jwt expired") || error.message.includes("invalid token")) {
             return res.status(401).send({ status: 401, message: "Token expired" });
         }

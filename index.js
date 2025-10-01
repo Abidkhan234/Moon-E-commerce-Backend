@@ -8,9 +8,10 @@ const app = express()
 
 const port = process.env.PORT;
 
-// For converting Data into JSON
+// For converting normal Data into these
+app.use(express.urlencoded({ extended: false, }));
 app.use(express.json());
-// For converting Data into JSON
+// For converting normal Data into these
 
 // For DB Connection
 const db = mongoose.connection;
