@@ -1,11 +1,13 @@
 import express from 'express'
 import { adminRoute, protectedRoute } from '../middlewares/protectedRoute.js';
-import { addProduct, deleteProduct, editProduct, getAllProducts } from '../controllers/product/product.controller.js';
+import { addProduct, deleteProduct, editProduct, findProducts, getAllProducts } from '../controllers/product/product.controller.js';
 import upload from '../config/multerConfig.js'
 
 const productRoute = express.Router();
 
-productRoute.get("/", protectedRoute, adminRoute, getAllProducts);
+productRoute.get("/", getAllProducts);
+
+productRoute.get("/search/:find", findProducts);
 
 productRoute.post("/add-product", protectedRoute, adminRoute, upload.single('image'), addProduct);
 

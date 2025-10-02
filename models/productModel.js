@@ -1,17 +1,33 @@
 import mongoose from 'mongoose'
 
+const imageSchema = new mongoose.Schema({
+    url: {
+        type: String,
+        required: true
+    },
+    public_id: {
+        type: String,
+        required: true
+    },
+},
+    { _id: false }
+);
+
 const productSchema = new mongoose.Schema({
     title: {
         type: String,
         required: true,
+        lowercase: true,
     },
     description: {
         type: String,
         required: true,
+        lowercase: true,
     },
     category: {
         type: [String],
         required: true,
+        lowercase: true,
     },
     price: {
         type: Number,
@@ -26,16 +42,10 @@ const productSchema = new mongoose.Schema({
     brand: {
         type: String,
         required: true,
+        lowercase: true,
     },
     image: {
-        type: {
-            url: {
-                type: String
-            },
-            public_id: {
-                type: String
-            }
-        },
+        type: imageSchema,
         required: true,
     },
     adminId: {

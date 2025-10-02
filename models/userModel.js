@@ -21,6 +21,12 @@ const userSchema = new mongoose.Schema({
         default: null,
         type: String
     },
+    cartItems: [
+        {
+            productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+            itemQuantity: { type: Number, default: 1 },
+        }
+    ],
     role: {
         type: String,
         enum: ["user", "admin"],
@@ -45,6 +51,6 @@ userSchema.methods.comparePassword = async function (password) {
     return await bcrypt.compare(password, this.password)
 }
 
-const User = mongoose.model("Users", userSchema);
+const User = mongoose.model("User", userSchema);
 
 export default User

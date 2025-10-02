@@ -1,15 +1,106 @@
+import req from "express/lib/request.js";
 import Product from "../../models/productModel.js";
 import User from "../../models/userModel.js";
 import { imageDestroyer, imageUploader } from '../../utils/cloudinary.js'
 
 const getAllProducts = async (req, res) => {
-    try {
-        const products = await Product.find({});
+    const { sortBy, page = 1, limit = 6, ...filters } = req.query;
 
-        res.status(200).json({ status: 200, products: [...products] })
+    if (page < 0) {
+        try {
+            const product = await Product.find(filters);
+
+            if (!product) {
+                return res.status(404).send({ status: 404, message: "Product not found" })
+            }
+
+            const totalRecord = await Product.countDocuments(filters);
+
+            return res.status(200).json({
+                status: 200,
+                product,
+                totalRecord
+            });
+        } catch (error) {
+            console.log(error);
+            res.status(500).send({ status: 500, message: "Internal server error", error: error.message })
+        }
+    }
+
+    // For Pagination
+    const skip = (Number(page) - 1) * Number(limit);
+    // For Pagination
+
+    // For Sorting: Like latest,high to low and low to high
+    let sortCondition = {};
+    // For Sorting: Like latest,high to low and low to high
+
+    if (typeof sortBy == "string") {
+        const sort = sortBy.toLowerCase();
+
+        if (sort.includes("latest")) {
+            sortCondition = { createdAt: -1 }; // newest first
+        } else if (sort.includes("low")) {
+            sortCondition = { discountedPrice: 1 }; // ascending
+        } else if (sort.includes("high")) {
+            sortCondition = { discountedPrice: -1 }; // descending
+        }
+    }
+
+    try {
+
+        const products = await Product.find(filters)
+            .sort(sortCondition)
+            .skip(skip)
+            .limit(Number(limit));
+
+        if (!products) {
+            return res.status(404).send({ status: 404, message: "Product not found" })
+        }
+
+        const totalRecord = await Product.countDocuments(filters);
+
+        return res.status(200).json({
+            status: 200,
+            products,
+            pagination: {
+                totalRecord,
+                limit: Number(limit),
+                skip: Number(skip),
+                totalPages: (Math.ceil(totalRecord / Number(limit)))
+            }
+        });
     } catch (error) {
         console.log("Products Error", error);
-        res.status(500).send({ status: 500, message: "Server Error", error: error.message })
+        res.status(500).send({
+            status: 500,
+            message: "Server Error",
+            error: error.message,
+        });
+    }
+};
+
+const findProducts = async (req, res) => {
+    try {
+
+        const { find } = req.params;
+
+        const { ...filters } = req.query;
+
+        const products = await Product.distinct(find, filters);
+
+        if (!products) {
+            return res.status(404).send({ status: 404, message: "No product found" })
+        }
+
+        res.status(200).send({ status: 200, products })
+    } catch (error) {
+        console.log("Products Error", error);
+        res.status(500).send({
+            status: 500,
+            message: "Server Error",
+            error: error.message,
+        });
     }
 }
 
@@ -124,4 +215,4 @@ const editProduct = async (req, res) => {
     }
 }
 
-export { getAllProducts, addProduct, deleteProduct, editProduct }
+export { getAllProducts, addProduct, deleteProduct, editProduct, findProducts }
