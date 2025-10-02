@@ -5,7 +5,7 @@ import { generateAccessToken, generateRefreshToken } from "../../utils/generateT
 
 const registerUser = async (req, res) => {
     try {
-        const { email, userName, password } = req.body;
+        const { email, userName, password, role } = req.body;
 
         const user = await User.findOne({ email });
 
@@ -16,7 +16,8 @@ const registerUser = async (req, res) => {
         await User.create({
             email,
             userName,
-            password
+            password,
+            role
         })
 
         return res.status(201).send({ status: 201, message: "Sign up successfully" });
