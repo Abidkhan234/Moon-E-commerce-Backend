@@ -8,7 +8,6 @@ const productDetailSchema = new mongoose.Schema({
     },
     quantity: {
         type: Number,
-        required: true
     }
 }, { _id: false })
 

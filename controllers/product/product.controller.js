@@ -1,16 +1,15 @@
-import req from "express/lib/request.js";
 import Product from "../../models/productModel.js";
 import User from "../../models/userModel.js";
 import { imageDestroyer, imageUploader } from '../../utils/cloudinary.js'
 
 const getAllProducts = async (req, res) => {
-    const { sortBy, page = 1, limit = 6, ...filters } = req.query;
+    const { sortBy, page = 1, limit = 5, ...filters } = req.query;
 
     if (page < 0) {
         try {
-            const product = await Product.find(filters);
+            const products = await Product.find(filters);
 
-            if (!product) {
+            if (!products) {
                 return res.status(404).send({ status: 404, message: "Product not found" })
             }
 
@@ -18,7 +17,7 @@ const getAllProducts = async (req, res) => {
 
             return res.status(200).json({
                 status: 200,
-                product,
+                products,
                 totalRecord
             });
         } catch (error) {
@@ -79,6 +78,32 @@ const getAllProducts = async (req, res) => {
         });
     }
 };
+
+const getSingleProduct = async (req, res) => {
+    const { id } = req.params;
+    try {
+
+        if (!id) {
+            return res.status(400).send({ status: 400, message: "No id provided" })
+        }
+
+        const singleProduct = await Product.findById(id);
+
+        if (!singleProduct) {
+            return res.status(404).send({ status: 404, message: "Product not found" });
+        }
+
+        const similarProducts = await Product.find({
+            brand: singleProduct.brand,
+            _id: { $ne: singleProduct._id }, // exclude same product
+        });
+
+        res.status(200).send({ status: 200, singleProduct, similarProducts })
+    } catch (error) {
+        console.log("Single Prodcut Error", error.message);
+        res.status(500).send({ status: 500, message: "Internal server error", error: error.message })
+    }
+}
 
 const findProducts = async (req, res) => {
     try {
@@ -215,4 +240,4 @@ const editProduct = async (req, res) => {
     }
 }
 
-export { getAllProducts, addProduct, deleteProduct, editProduct, findProducts }
+export { getAllProducts, addProduct, deleteProduct, editProduct, findProducts, getSingleProduct }
